@@ -35,15 +35,8 @@
 ## 🚀 Quick Start
 
 ```bash
-# Clone repository
-git clone https://github.com/neosun100/depth-pro-docker.git
-cd depth-pro-docker
-
-# Download model checkpoint
-source get_pretrained_models.sh
-
-# Start with Docker Compose
-docker compose up -d
+# One command to run (All-in-One image, no downloads needed!)
+docker run -d --name depth-pro --gpus all -p 8500:8500 neosun/depth-pro:latest
 
 # Open browser
 open http://localhost:8500
@@ -57,39 +50,45 @@ open http://localhost:8500
 - NVIDIA GPU with 8GB+ VRAM (16GB+ recommended)
 - CUDA 12.1 compatible driver
 
-### Method 1: Docker Compose (Recommended)
+### Method 1: Docker Run (Recommended)
+
+**All-in-One image includes model weights (~5GB), no additional downloads required!**
 
 ```bash
-# Clone and enter directory
-git clone https://github.com/neosun100/depth-pro-docker.git
-cd depth-pro-docker
-
-# Download model (1.8GB)
-source get_pretrained_models.sh
-
-# Configure environment
-cp .env.example .env
-# Edit .env to set GPU device if needed
-
-# Start services
-docker compose up -d
-```
-
-### Method 2: Docker Run
-
-```bash
-# Pull image
-docker pull neosun/depth-pro:latest
-
-# Run container
+# Pull and run (model included in image)
 docker run -d \
   --name depth-pro \
-  --gpus '"device=0"' \
+  --gpus all \
   -p 8500:8500 \
-  -v ./checkpoints:/app/checkpoints \
-  -e PORT=8500 \
   -e GPU_IDLE_TIMEOUT=60 \
   neosun/depth-pro:latest
+```
+
+### Method 2: Docker Compose
+
+```bash
+# Create docker-compose.yml
+cat > docker-compose.yml << 'EOF'
+services:
+  depth-pro:
+    image: neosun/depth-pro:latest
+    container_name: depth-pro
+    ports:
+      - "8500:8500"
+    environment:
+      - GPU_IDLE_TIMEOUT=60
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+EOF
+
+# Start service
+docker compose up -d
 ```
 
 ### Method 3: Local Development
@@ -129,8 +128,6 @@ services:
     container_name: depth-pro
     ports:
       - "8500:8500"
-    volumes:
-      - ./checkpoints:/app/checkpoints
     environment:
       - PORT=8500
       - GPU_IDLE_TIMEOUT=60

@@ -35,15 +35,8 @@
 ## 🚀 快速开始
 
 ```bash
-# 克隆仓库
-git clone https://github.com/neosun100/depth-pro-docker.git
-cd depth-pro-docker
-
-# 下载模型权重
-source get_pretrained_models.sh
-
-# Docker Compose 启动
-docker compose up -d
+# 一条命令启动 (All-in-One 镜像，无需下载模型！)
+docker run -d --name depth-pro --gpus all -p 8500:8500 neosun/depth-pro:latest
 
 # 打开浏览器
 open http://localhost:8500
@@ -57,39 +50,45 @@ open http://localhost:8500
 - NVIDIA GPU，显存 8GB+ (推荐 16GB+)
 - CUDA 12.1 兼容驱动
 
-### 方式一：Docker Compose（推荐）
+### 方式一：Docker Run（推荐）
+
+**All-in-One 镜像已包含模型权重 (~5GB)，无需额外下载！**
 
 ```bash
-# 克隆并进入目录
-git clone https://github.com/neosun100/depth-pro-docker.git
-cd depth-pro-docker
+# 拉取并运行 (模型已内置)
+docker run -d \
+  --name depth-pro \
+  --gpus all \
+  -p 8500:8500 \
+  -e GPU_IDLE_TIMEOUT=60 \
+  neosun/depth-pro:latest
+```
 
-# 下载模型 (1.8GB)
-source get_pretrained_models.sh
+### 方式二：Docker Compose
 
-# 配置环境变量
-cp .env.example .env
-# 编辑 .env 设置 GPU 设备（如需要）
+```bash
+# 创建 docker-compose.yml
+cat > docker-compose.yml << 'EOF'
+services:
+  depth-pro:
+    image: neosun/depth-pro:latest
+    container_name: depth-pro
+    ports:
+      - "8500:8500"
+    environment:
+      - GPU_IDLE_TIMEOUT=60
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+EOF
 
 # 启动服务
 docker compose up -d
-```
-
-### 方式二：Docker Run
-
-```bash
-# 拉取镜像
-docker pull neosun/depth-pro:latest
-
-# 运行容器
-docker run -d \
-  --name depth-pro \
-  --gpus '"device=0"' \
-  -p 8500:8500 \
-  -v ./checkpoints:/app/checkpoints \
-  -e PORT=8500 \
-  -e GPU_IDLE_TIMEOUT=60 \
-  neosun/depth-pro:latest
 ```
 
 ### 方式三：本地开发
@@ -129,8 +128,6 @@ services:
     container_name: depth-pro
     ports:
       - "8500:8500"
-    volumes:
-      - ./checkpoints:/app/checkpoints
     environment:
       - PORT=8500
       - GPU_IDLE_TIMEOUT=60

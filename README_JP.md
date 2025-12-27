@@ -35,15 +35,8 @@
 ## 🚀 クイックスタート
 
 ```bash
-# リポジトリをクローン
-git clone https://github.com/neosun100/depth-pro-docker.git
-cd depth-pro-docker
-
-# モデルをダウンロード
-source get_pretrained_models.sh
-
-# Docker Compose で起動
-docker compose up -d
+# 1コマンドで起動 (All-in-One イメージ、モデルダウンロード不要！)
+docker run -d --name depth-pro --gpus all -p 8500:8500 neosun/depth-pro:latest
 
 # ブラウザを開く
 open http://localhost:8500
@@ -57,39 +50,45 @@ open http://localhost:8500
 - NVIDIA GPU、VRAM 8GB+ (16GB+ 推奨)
 - CUDA 12.1 互換ドライバー
 
-### 方法1: Docker Compose（推奨）
+### 方法1: Docker Run（推奨）
+
+**All-in-One イメージにはモデル重み (~5GB) が含まれています。追加ダウンロード不要！**
 
 ```bash
-# クローンしてディレクトリに移動
-git clone https://github.com/neosun100/depth-pro-docker.git
-cd depth-pro-docker
+# プルして実行 (モデル内蔵)
+docker run -d \
+  --name depth-pro \
+  --gpus all \
+  -p 8500:8500 \
+  -e GPU_IDLE_TIMEOUT=60 \
+  neosun/depth-pro:latest
+```
 
-# モデルをダウンロード (1.8GB)
-source get_pretrained_models.sh
+### 方法2: Docker Compose
 
-# 環境変数を設定
-cp .env.example .env
-# 必要に応じて .env を編集して GPU デバイスを設定
+```bash
+# docker-compose.yml を作成
+cat > docker-compose.yml << 'EOF'
+services:
+  depth-pro:
+    image: neosun/depth-pro:latest
+    container_name: depth-pro
+    ports:
+      - "8500:8500"
+    environment:
+      - GPU_IDLE_TIMEOUT=60
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+EOF
 
 # サービスを起動
 docker compose up -d
-```
-
-### 方法2: Docker Run
-
-```bash
-# イメージをプル
-docker pull neosun/depth-pro:latest
-
-# コンテナを実行
-docker run -d \
-  --name depth-pro \
-  --gpus '"device=0"' \
-  -p 8500:8500 \
-  -v ./checkpoints:/app/checkpoints \
-  -e PORT=8500 \
-  -e GPU_IDLE_TIMEOUT=60 \
-  neosun/depth-pro:latest
 ```
 
 ### 方法3: ローカル開発
@@ -129,8 +128,6 @@ services:
     container_name: depth-pro
     ports:
       - "8500:8500"
-    volumes:
-      - ./checkpoints:/app/checkpoints
     environment:
       - PORT=8500
       - GPU_IDLE_TIMEOUT=60
